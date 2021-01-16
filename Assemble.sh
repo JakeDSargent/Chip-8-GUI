@@ -1,0 +1,1 @@
+python Chip8Assembler/assembler.py --print $1 > "${1%%.*}.ch8"

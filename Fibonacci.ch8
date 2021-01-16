@@ -1,0 +1,51 @@
+-- Assembled Statements --
+0x0200 00E0              CLR                  # Clear Screen                            
+0x0202 6703             LOAD           R7,$3  # Initial xpos                            
+0x0204 6801             LOAD           R8,$1  # Initial ypos                            
+0x0206 6A00             LOAD           RA,$0  #                                         
+0x0208 221E             CALL        DrawNumA  # Fibonacci(n=0)                          
+0x020A 6A01             LOAD           RA,$1  #                                         
+0x020C 221E             CALL        DrawNumA  # Fibonacci(n=1)                          
+0x020E 221E             CALL        DrawNumA  # Fibonacci(n=2)                          
+0x0210 6A01             LOAD           RA,$1  # Dont start algorithm until              
+0x0212 6B01             LOAD           RB,$1  # Fibonanni(n=3)                          
+0x0214 8AB4   MainLoop  ADDR           RA,RB  # A = B + A                               
+0x0216 221E             CALL        DrawNumA  #                                         
+0x0218 8BA4             ADDR           RB,RA  # B = A + B                               
+0x021A 223C             CALL        DrawNumB  #                                         
+0x021C 1214             JUMP        MainLoop  #                                         
+0x021E AB17   DrawNumA LOADI            $B17  # Random Far MM location                  
+0x0220 FA33              BCD              RA  #                                         
+0x0222 F265             READ              R2  #                                         
+0x0224 F029            LDSPR              R0  # Load Char Sprite for value RX           
+0x0226 D785             DRAW        R7,R8,$5  # Draw Sprite I at X, Y, Nbytes           
+0x0228 7705              ADD           R7,$5  # move x 4 width char + 1 space           
+0x022A F129            LDSPR              R1  #                                         
+0x022C D785             DRAW        R7,R8,$5  # Draw Sprite I at X, Y, Nbytes           
+0x022E 7705              ADD           R7,$5  # move x 4 width char + 1 space           
+0x0230 F229            LDSPR              R2  #                                         
+0x0232 D785             DRAW        R7,R8,$5  # Draw Sprite I at X, Y, Nbytes           
+0x0234 770A              ADD           R7,$A  # move x 4 width char + 6 space           
+0x0236 477B             SKNE          R7,$7B  # X Position after 6 BCD writes           
+0x0238 225A             CALL         NewLine  #                                         
+0x023A 00EE              RTS                  #                                         
+0x023C AB17   DrawNumB LOADI            $B17  # Random Far MM location                  
+0x023E FB33              BCD              RB  #                                         
+0x0240 F265             READ              R2  #                                         
+0x0242 F029            LDSPR              R0  # Load Char Sprite for value RX           
+0x0244 D785             DRAW        R7,R8,$5  # Draw Sprite I at X, Y, Nbytes           
+0x0246 7705              ADD           R7,$5  # move x 4 width char + 1 space           
+0x0248 F129            LDSPR              R1  #                                         
+0x024A D785             DRAW        R7,R8,$5  # Draw Sprite I at X, Y, Nbytes           
+0x024C 7705              ADD           R7,$5  # move x 4 width char + 1 space           
+0x024E F229            LDSPR              R2  #                                         
+0x0250 D785             DRAW        R7,R8,$5  # Draw Sprite I at X, Y, Nbytes           
+0x0252 770A              ADD           R7,$A  # move x 4 width char + 6 space           
+0x0254 477B             SKNE           R7,7B  # X Position after 6 BCD writes           
+0x0256 225A             CALL         NewLine  #                                         
+0x0258 00EE              RTS                  #                                         
+0x025A 6703    NewLine  LOAD           R7,$3  # Reset initial X position                
+0x025C 7806              ADD           R8,$6  # 5 pixels tall 1 space                   
+0x025E 483D             SKNE          R8,$3D  # Skip unless at bottom                   
+0x0260 6801             LOAD           R8,$1  #                                         
+0x0262 00EE              RTS                  #                                         
