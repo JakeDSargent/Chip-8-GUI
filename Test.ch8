@@ -1,0 +1,86 @@
+-- Assembled Statements --
+0x0200 6000   TestRegs  LOAD           R0,$0  # Just testing all registers              
+0x0202 6101             LOAD           R1,$1  #                                         
+0x0204 6202             LOAD           R2,$2  #                                         
+0x0206 6303             LOAD           R3,$3  #                                         
+0x0208 6404             LOAD           R4,$4  #                                         
+0x020A 6505             LOAD           R5,$5  #                                         
+0x020C 6606             LOAD           R6,$6  #                                         
+0x020E 6707             LOAD           R7,$7  #                                         
+0x0210 6808             LOAD           R8,$8  #                                         
+0x0212 6909             LOAD           R9,$9  #                                         
+0x0214 6A0A             LOAD           RA,$A  #                                         
+0x0216 6B0B             LOAD           RB,$B  #                                         
+0x0218 6C0C             LOAD           RC,$C  #                                         
+0x021A 6D0D             LOAD           RD,$D  #                                         
+0x021C 6E0E             LOAD           RE,$E  #                                         
+0x021E 6F0F             LOAD           RF,$F  #                                         
+0x0220 3E0E              SKE           RE,$E  # Test SKE                                
+0x0222 12A6             JUMP           ERROR  #                                         
+0x0224 8554             ADDR           R5,R5  #                                         
+0x0226 55A0             SKRE           R5,RA  # Test SKRE                               
+0x0228 12A6             JUMP           ERROR  #                                         
+0x022A 8050             MOVE           R0,R5  # Test MOVE                               
+0x022C 5050             SKRE           R0,R5  #                                         
+0x022E 12A6             JUMP           ERROR  #                                         
+0x0230 6CAA             LOAD          RC,$AA  #                                         
+0x0232 6000             LOAD          R0,$00  #                                         
+0x0234 8C01               OR           RC,R0  # Test OR                                 
+0x0236 3CAA              SKE          RC,$AA  #                                         
+0x0238 12A6             JUMP           ERROR  #                                         
+0x023A 600A             LOAD          R0,$0A  #                                         
+0x023C 8A02              AND           RA,R0  # Test AND                                
+0x023E 3A0A              SKE          RA,$0A  #                                         
+0x0240 12A6             JUMP           ERROR  #                                         
+0x0242 6A3C             LOAD          RA,$3C  #                                         
+0x0244 8A03              XOR           RA,R0  # Test XOR                                
+0x0246 3A36              SKE          RA,$36  # 00110110                                
+0x0248 12A6             JUMP           ERROR  #                                         
+0x024A 6001             LOAD           R0,$1  #                                         
+0x024C 6103             LOAD           R1,$3  #                                         
+0x024E 8105              SUB           R1,R0  # Test SUB                                
+0x0250 3F01              SKE           RF,$1  #                                         
+0x0252 12A6             JUMP           ERROR  #                                         
+0x0254 3102              SKE           R1,$2  #                                         
+0x0256 12A6             JUMP           ERROR  #                                         
+0x0258 8116              SHR           R1,R1  # Test SHR                                
+0x025A 3F00              SKE           RF,$0  #                                         
+0x025C 12A6             JUMP           ERROR  #                                         
+0x025E 3101              SKE           R1,$1  #                                         
+0x0260 12A6             JUMP           ERROR  #                                         
+0x0262 6284             LOAD          R2,$84  #                                         
+0x0264 822E              SHL           R2,R2  # Test SHL                                
+0x0266 3F01              SKE           RF,$1  #                                         
+0x0268 12A6             JUMP           ERROR  #                                         
+0x026A 3208              SKE          R2,$08  #                                         
+0x026C 12A6             JUMP           ERROR  #                                         
+0x026E 64FF             LOAD           R4,FF  #                                         
+0x0270 9240            SKRNE           R2,R4  # Test SKRNE                              
+0x0272 12A6             JUMP           ERROR  #                                         
+0x0274 6000             LOAD           R0,$0  #                                         
+0x0276 B27A            JUMPI         SUCCESS  # Test JUMPI                              
+0x0278 12A6             JUMP           ERROR  #                                         
+0x027A C0FE    SUCCESS  RAND          R0,$FE  # Test RAND                               
+0x027C 40FF             SKNE          R0,$FF  #                                         
+0x027E 12A6             JUMP           ERROR  #                                         
+0x0280 6007             LOAD           R0,$7  # PRESS KEY 7                             
+0x0282 E09E             SKPR              R0  # Test SKPR                               
+0x0284 12A6             JUMP           ERROR  #                                         
+0x0286 6007             LOAD           R0,$7  # RELEASE KEY 0                           
+0x0288 E0A1             SKUP              R0  # Test SKPR                               
+0x028A 12A6             JUMP           ERROR  #                                         
+0x028C 69FF             LOAD          R9,$FF  #                                         
+0x028E F915            LOADD              R9  # Test LOADD                              
+0x0290 F407            MOVED              R4  # Test MOVED                              
+0x0292 4400             SKNE           R4,$0  #                                         
+0x0294 12A6             JUMP           ERROR  #                                         
+0x0296 F918            LOADS              R9  #                                         
+0x0298 F50A             KEYD              R5  # Test KEYD PRESS KEY                     
+0x029A 6217             LOAD          R2,$17  #                                         
+0x029C AB00            LOADI            $B00  #                                         
+0x029E F21E             ADDI              R2  # Test ADDI                               
+0x02A0 FF55             STOR              RF  #                                         
+0x02A2 6FAA       PASS  LOAD          RF,$AA  #                                         
+0x02A4 12A2             JUMP            PASS  #                                         
+0x02A6 6FEE      ERROR  LOAD          RF,$EE  #                                         
+0x02A8 12A6             JUMP           ERROR  #                                         

@@ -136,7 +136,11 @@ class Chip8:
 
   MICROSEC_60Hz = 16667
 
+  # for 8xy[6/E
+  IGNORE_SHIFT_Y = True 
+
   def __init__(self):
+
     self.V0 = Byte()
     self.V1 = Byte()
     self.V2 = Byte()
@@ -154,12 +158,6 @@ class Chip8:
     self.VE = Byte()
     self.VF = Byte()
 
-    self.V = { "0" : self.V0, "1" : self.V1, "2" : self.V2, "3" : self.V3, 
-               "4" : self.V4, "5" : self.V5, "6" : self.V6, "7" : self.V7,
-               "8" : self.V8, "9" : self.V9, "A" : self.VA, "B" : self.VB, 
-               "C" : self.VC, "D" : self.VD, "E" : self.VE, "F" : self.VF }
-                  
-
     self.I = Word()
 
     self.delay = Byte()
@@ -167,20 +165,60 @@ class Chip8:
 
     self.PC = Word("0200")
     self.MM = [Byte(0) for i in range(4096)]
+    self.MM_updated = False
 
     self.SP = Byte("0F")
     self.Stack = [Word(0) for i in range(16)]
+    
+    self.default_registers()
 
-    self.blank_screen = [[False for y in range(Chip8.SCREEN_HEIGHT)] for x in range(Chip8.SCREEN_WIDTH)]
-    self.screen = self.blank_screen.copy()
+    self.V = { "0" : self.V0, "1" : self.V1, "2" : self.V2, "3" : self.V3, 
+               "4" : self.V4, "5" : self.V5, "6" : self.V6, "7" : self.V7,
+               "8" : self.V8, "9" : self.V9, "A" : self.VA, "B" : self.VB, 
+               "C" : self.VC, "D" : self.VD, "E" : self.VE, "F" : self.VF }
+
+    self.screen = [[False for y in range(Chip8.SCREEN_HEIGHT)] for x in range(Chip8.SCREEN_WIDTH)]
     self.screen_needs_refreshed = True
+    self.pixel_toggles = []
+
 
     self.key_pressed = [False] * 16
 
     self.last_timer_tick = datetime.now()
 
+
+  def default_registers(self):
+    self.V0.set(0)
+    self.V1.set(0)
+    self.V2.set(0)
+    self.V3.set(0)
+    self.V4.set(0)
+    self.V5.set(0)
+    self.V6.set(0)
+    self.V7.set(0)
+    self.V8.set(0)
+    self.V9.set(0)
+    self.VA.set(0)
+    self.VB.set(0)
+    self.VC.set(0)
+    self.VD.set(0)
+    self.VE.set(0)
+    self.VF.set(0)
+
+    self.I.set(0)
+
+    self.delay.set(0)
+    self.sound.set(0)
+
+    self.PC.set("0200")
+    for i in range(4096):
+      self.MM[i].set(0) 
+
+    self.SP = Byte("0F")
+
     self.MM[512].set("24")  # first instruction == call to 400
     self.MM[1024].set("14")  # jump to 400
+
     self.load_hex_chars()
 
   def load_hex_chars(self):
@@ -283,6 +321,8 @@ class Chip8:
         self.MM[addr+1].set(instruction[2:])
 
   def execute_current_instruction(self):
+    self.MM_updated = False 
+
     instruction_str = str(self.MM[self.PC.value]) + str(self.MM[self.PC.value+1])
     self.PC.increment(2)
 
@@ -297,7 +337,7 @@ class Chip8:
     # 00E0 - CLS
     # Clear the display.
     if instruction_str == "00E0":
-      self.screen = self.blank_screen.copy()
+      self.screen = [[False for y in range(Chip8.SCREEN_HEIGHT)] for x in range(Chip8.SCREEN_WIDTH)]
       self.screen_needs_refreshed = True
 
     # 00EE - RET
@@ -434,7 +474,7 @@ class Chip8:
           self.VF.set(1)
         else:
           self.VF.set(0)
-        self.V[x].set(self.V[x].value // 2)
+        self.V[x].set(self.V[y].value // 2)
 
       # 8xy7 - SUBN Vx, Vy
       # Set Vx = Vy - Vx, set VF = NOT borrow.
@@ -459,7 +499,7 @@ class Chip8:
           self.VF.set(1)
         else:
           self.VF.set(0)
-        self.V[x].set(self.V[x].value * 2)
+        self.V[y].set(self.V[x].value * 2)
 
     # 9xy0 - SNE Vx, Vy
     # Skip next instruction if Vx != Vy.
@@ -502,12 +542,11 @@ class Chip8:
       for i in range(Byte.hex_dict[n]):
         for j in range(8):
           if self.MM[self.I.value + i].bin_str[j] == "1":  # toggle pixel
-            self.screen_needs_refreshed = True
             
             if self.screen[x_pos+j][y_pos+i]:
               collision = True
 
-            self.screen[x_pos+j][y_pos+i] = not self.screen[x_pos+j][y_pos+i]
+            self.pixel_toggles.append((x_pos+j, y_pos+i))  # handled at GUI level for performance
 
       if collision:
         self.VF.set(1)
@@ -551,12 +590,12 @@ class Chip8:
 
       # All execution stops until a key is pressed, then the value of that key is stored in Vx.
       elif kk == 10:
-        while(not any(self.key_pressed)):
-          pass  # tkinter provides key_board interrupts
-
-        for i in range(16):
-          if self.key_pressed[i]:
-            self.V[x].set(i)
+        if (not any(self.key_pressed)):
+          self.PC.decrement(2) 
+        else:
+          for i in range(16):
+            if self.key_pressed[i]:
+              self.V[x].set(i)
 
       # Fx15 - LD DT, Vx
       # Set delay timer = Vx.
@@ -591,6 +630,7 @@ class Chip8:
 
       # The interpreter takes the decimal value of Vx, and places the hundreds digit in memory at location in I, the tens digit at location I+1, and the ones digit at location I+2.
       elif kk == 3*16 + 3:
+        self.MM_updated = True
         bcd = str(self.V[x].value).rjust(3, "0")
         print(bcd)
         self.MM[self.I.value + 0].set(int(bcd[0]))
@@ -602,6 +642,7 @@ class Chip8:
 
       # The interpreter copies the values of registers V0 through Vx into memory, starting at the address in I.
       elif kk == 5*16 + 5:
+        self.MM_updated = True
         for i in range(16):
           self.MM[self.I.value + i].set(self.V[Byte.hex_dict[i]])
           if Byte.hex_dict[i] == x:

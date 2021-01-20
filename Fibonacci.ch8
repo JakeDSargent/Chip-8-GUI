@@ -1,7 +1,7 @@
 -- Assembled Statements --
 0x0200 00E0              CLR                  # Clear Screen                            
-0x0202 6703             LOAD           R7,$3  # Initial xpos                            
-0x0204 6801             LOAD           R8,$1  # Initial ypos                            
+0x0202 6706             LOAD           R7,$6  # Initial xpos                            
+0x0204 6802             LOAD           R8,$2  # Initial ypos                            
 0x0206 6A00             LOAD           RA,$0  #                                         
 0x0208 221E             CALL        DrawNumA  # Fibonacci(n=0)                          
 0x020A 6A01             LOAD           RA,$1  #                                         
@@ -26,7 +26,7 @@
 0x0230 F229            LDSPR              R2  #                                         
 0x0232 D785             DRAW        R7,R8,$5  # Draw Sprite I at X, Y, Nbytes           
 0x0234 770A              ADD           R7,$A  # move x 4 width char + 6 space           
-0x0236 477B             SKNE          R7,$7B  # X Position after 6 BCD writes           
+0x0236 477E             SKNE          R7,$7E  # X Position after 6 BCD writes           
 0x0238 225A             CALL         NewLine  #                                         
 0x023A 00EE              RTS                  #                                         
 0x023C AB17   DrawNumB LOADI            $B17  # Random Far MM location                  
@@ -41,11 +41,13 @@
 0x024E F229            LDSPR              R2  #                                         
 0x0250 D785             DRAW        R7,R8,$5  # Draw Sprite I at X, Y, Nbytes           
 0x0252 770A              ADD           R7,$A  # move x 4 width char + 6 space           
-0x0254 477B             SKNE           R7,7B  # X Position after 6 BCD writes           
+0x0254 477E             SKNE           R7,7E  # X Position after 6 BCD writes           
 0x0256 225A             CALL         NewLine  #                                         
 0x0258 00EE              RTS                  #                                         
-0x025A 6703    NewLine  LOAD           R7,$3  # Reset initial X position                
+0x025A 6706    NewLine  LOAD           R7,$6  # Reset initial X position                
 0x025C 7806              ADD           R8,$6  # 5 pixels tall 1 space                   
-0x025E 483D             SKNE          R8,$3D  # Skip unless at bottom                   
-0x0260 6801             LOAD           R8,$1  #                                         
-0x0262 00EE              RTS                  #                                         
+0x025E 483E             SKNE          R8,$3E  # Skip unless at bottom                   
+0x0260 00E0              CLR                  #                                         
+0x0262 483E             SKNE          R8,$3E  # Skip unless at bottom                   
+0x0264 6802             LOAD           R8,$2  #                                         
+0x0266 00EE              RTS                  #                                         

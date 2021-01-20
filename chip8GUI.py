@@ -1,6 +1,7 @@
 from chip8 import *
 import os
 import tkinter as tk
+import tkinter.filedialog
 
 DEBUG_MODE = True
 
@@ -13,10 +14,13 @@ class ByteDisplay:
     self.display = tk.Label(self.frame, textvariable=self.text_var, bg=bg, fg=fg, font=("Courier", 12))
     self.title.pack()
     self.display.pack()
+    self.last_val = ""
     self.update()
   
   def update(self):
-    self.text_var.set(self.data.hex_str)
+    if self.last_val != self.data.hex_str:
+      self.last_val = self.data.hex_str
+      self.text_var.set(self.data.hex_str)
 
 class WordDisplay:
   def __init__(self, master, data_word, title, bg, fg, border=0):
@@ -27,10 +31,13 @@ class WordDisplay:
     self.display = tk.Label(self.frame, textvariable=self.text_var, bg=bg, fg=fg, font=("Courier", 10))
     self.title.pack(side=tk.LEFT)
     self.display.pack(side=tk.LEFT)
+    self.last_val = ""
     self.update()
   
   def update(self):
-    self.text_var.set(self.data.hex_str)
+    if self.last_val != self.data.hex_str:
+      self.last_val = self.data.hex_str
+      self.text_var.set(self.data.hex_str)
 
 class StackDisplay:
   rows_per_col = 8
@@ -80,6 +87,9 @@ class Chip8GUI:
       self.PC_color = "Red"
       self.I_color = "Cyan"
       self.Stack_Color = "Yellow"
+      self.MM_pixel_updates = []
+      self.last_SP = 999999999999999999999999999  # improbable value to init
+      self.last_I  = 999999999999999999999999999
 
     self.keypad = tk.Frame(self.root)
     self.keys = []
@@ -124,6 +134,7 @@ class Chip8GUI:
       self.register_displays.append(pc_display)
     
       self.register_frame.grid(column=1, row=1, rowspan=2, sticky=tk.W+tk.E+tk.N)
+      self.MM_uninitialized = True
 
     self.chip8_running = False
 
@@ -134,7 +145,9 @@ class Chip8GUI:
     self.run_stringvar = tk.StringVar()
     self.run_stringvar.set("RUN")
     self.run_button = tk.Button(self.button_frame, command=self.run_button_event, textvariabl=self.run_stringvar, fg=self.fg, bg=self.bg, font=("Courier", 14))
-    self.run_button.pack(side=tk.RIGHT)
+    self.run_button.pack(side=tk.LEFT)
+    self.load_button = tk.Button(self.button_frame, command=self.load_from_file, text="LOAD", fg=self.fg, bg=self.bg, font=("Courier", 14))
+    self.load_button.pack(side=tk.RIGHT)
 
     for i in range(10):
       self.root.rowconfigure(i, weight=10)
@@ -142,6 +155,16 @@ class Chip8GUI:
     self.root.rowconfigure(3, weight=1)
     self.step_GUI()
 
+  def load_from_file(self):
+    filename = tk.filedialog.askopenfilename(filetypes=[("Chip-8 Assembled Statements", ".ch8")])
+
+    if self.chip8_running:
+      self.run_button_event()
+
+    self.chip8.default_registers()
+    self.chip8.load(filename)
+    self.MM_uninitialized = True
+    
   def run(self):
     if self.chip8_running:
       self.chip8.step()
@@ -206,10 +229,18 @@ class Chip8GUI:
       for i in range(16):
         self.key_frames[key_order[i]].grid(column=i%4, row=i//4, sticky=tk.N+tk.S+tk.W+tk.E, ipadx=10)
 
-      
-
   def draw_screen(self):
+    for point in self.chip8.pixel_toggles:
+      self.chip8.screen[point[0]][point[1]] = not self.chip8.screen[point[0]][point[1]]
+
+      if self.chip8.screen[point[0]][point[1]]:
+        self.screen.itemconfig([point[0]*self.chip8.SCREEN_HEIGHT + point[1]], fill=self.fg, outline=self.fg)
+      else:
+        self.screen.itemconfig([point[0]*self.chip8.SCREEN_HEIGHT + point[1]], fill=self.bg, outline=self.bg)
+    self.chip8.pixel_toggles.clear()
+
     if self.chip8.screen_needs_refreshed:
+      self.chip8.screen_needs_refreshed = False
       pixel_id = 1
       for x in range(self.chip8.SCREEN_WIDTH):
         for y in range(self.chip8.SCREEN_HEIGHT):
@@ -220,33 +251,76 @@ class Chip8GUI:
           pixel_id += 1
 
   def draw_MM(self):
-    pixel_id = 1
-    for x in range(self.MM_cols):
-      for y in range(self.bytes_per_MM_col):
-        index = x*self.bytes_per_MM_col+y
-        temp_byte = self.chip8.MM[index].bin_str
-        for bit in range(8):
-          if index == self.chip8.I.value:
-            if temp_byte[bit] == '1':
-              self.MM.itemconfig(pixel_id, fill=self.fg, outline=self.I_color)
+    if self.MM_uninitialized:
+      self.MM_uninitialized = False 
+      pixel_id = 1
+      for x in range(self.MM_cols):
+        for y in range(self.bytes_per_MM_col):
+          index = x*self.bytes_per_MM_col+y
+          temp_byte = self.chip8.MM[index].bin_str
+          for bit in range(8):
+            if index == self.chip8.I.value:
+              if temp_byte[bit] == '1':
+                self.MM.itemconfig(pixel_id, fill=self.fg, outline=self.I_color)
+              else:
+                self.MM.itemconfig(pixel_id, fill=self.bg, outline=self.I_color)
+            elif index == self.chip8.PC.value or index == self.chip8.PC.value+1:
+              if temp_byte[bit] == '1':
+                self.MM.itemconfig(pixel_id, fill=self.fg, outline=self.PC_color)
+              else:
+                self.MM.itemconfig(pixel_id, fill=self.bg, outline=self.PC_color)
+            elif index == self.chip8.Stack[self.chip8.SP.value].value or index == self.chip8.Stack[self.chip8.SP.value].value+1:
+              if temp_byte[bit] == '1':
+                self.MM.itemconfig(pixel_id, fill=self.fg, outline=self.Stack_Color)
+              else:
+                self.MM.itemconfig(pixel_id, fill=self.bg, outline=self.Stack_Color)
             else:
-              self.MM.itemconfig(pixel_id, fill=self.bg, outline=self.I_color)
-          elif index == self.chip8.PC.value or index == self.chip8.PC.value+1:
-            if temp_byte[bit] == '1':
-              self.MM.itemconfig(pixel_id, fill=self.fg, outline=self.PC_color)
-            else:
-              self.MM.itemconfig(pixel_id, fill=self.bg, outline=self.PC_color)
-          elif index == self.chip8.Stack[self.chip8.SP.value].value or index == self.chip8.Stack[self.chip8.SP.value].value+1:
-            if temp_byte[bit] == '1':
-              self.MM.itemconfig(pixel_id, fill=self.fg, outline=self.Stack_Color)
-            else:
-              self.MM.itemconfig(pixel_id, fill=self.bg, outline=self.Stack_Color)
+              if temp_byte[bit] == '1':
+                self.MM.itemconfig(pixel_id, fill=self.fg, outline=self.fg)
+              else:
+                self.MM.itemconfig(pixel_id, fill=self.bg, outline=self.bg)
+            pixel_id += 1
+
+    self.MM_pixel_updates.append(self.chip8.PC.value)
+    self.MM_pixel_updates.append(self.chip8.PC.value+1)
+
+    if self.chip8.I.value != self.last_I:
+      self.last_I = self.chip8.I.value 
+      self.MM_pixel_updates.append(self.chip8.I.value)
+
+    if self.chip8.SP.value != self.last_SP:
+      self.last_SP = self.chip8.SP.value 
+      self.MM_pixel_updates.append(self.chip8.Stack[self.chip8.SP.value].value)
+      self.MM_pixel_updates.append(self.chip8.Stack[self.chip8.SP.value].value+1)
+
+    
+    if self.chip8.MM_updated:
+      for offset in range(16):
+        self.MM_pixel_updates.append(self.chip8.I.value + offset)
+
+    for index in self.MM_pixel_updates:
+      temp_byte = self.chip8.MM[index].bin_str
+      for bit in range(8):
+        if index == self.chip8.I.value:
+          if temp_byte[bit] == '1':
+            self.MM.itemconfig(index*8 + bit + 1, fill=self.fg, outline=self.I_color)  # itemconfig countes from 1
           else:
-            if temp_byte[bit] == '1':
-              self.MM.itemconfig(pixel_id, fill=self.fg, outline=self.fg)
-            else:
-              self.MM.itemconfig(pixel_id, fill=self.bg, outline=self.bg)
-          pixel_id += 1
+            self.MM.itemconfig(index*8 + bit + 1, fill=self.bg, outline=self.I_color)
+        elif index == self.chip8.PC.value or index == self.chip8.PC.value+1:
+          if temp_byte[bit] == '1':
+            self.MM.itemconfig(index*8 + bit + 1, fill=self.fg, outline=self.PC_color)
+          else:
+            self.MM.itemconfig(index*8 + bit + 1, fill=self.bg, outline=self.PC_color)
+        elif index == self.chip8.Stack[self.chip8.SP.value].value or index == self.chip8.Stack[self.chip8.SP.value].value+1:
+          if temp_byte[bit] == '1':
+            self.MM.itemconfig(index*8 + bit + 1, fill=self.fg, outline=self.Stack_Color)
+          else:
+            self.MM.itemconfig(index*8 + bit + 1, fill=self.bg, outline=self.Stack_Color)
+        else:
+          if temp_byte[bit] == '1':
+            self.MM.itemconfig(index*8 + bit + 1, fill=self.fg, outline=self.fg)
+          else:
+            self.MM.itemconfig(index*8 + bit + 1, fill=self.bg, outline=self.bg)
 
   def step_GUI(self):
     if self.DEBUG_MODE:

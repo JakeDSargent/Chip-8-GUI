@@ -1,6 +1,6 @@
           CLR                       #Clear Screen
-          LOAD        R7,$3         Initial xpos
-          LOAD        R8,$1         Initial ypos
+          LOAD        R7,$6         Initial xpos
+          LOAD        R8,$2         Initial ypos
           LOAD        RA,$0         
           CALL        DrawNumA      Fibonacci(n=0)
           LOAD        RA,$1         
@@ -26,7 +26,7 @@ DrawNumA  LOADI       $B17          Random Far MM location
           LDSPR       R2
           DRAW        R7,R8,$5      Draw Sprite I at X, Y, Nbytes
           ADD         R7,$A         move x 4 width char + 6 space
-          SKNE        R7,$7B        X Position after 6 BCD writes
+          SKNE        R7,$7E        X Position after 6 BCD writes
           CALL        NewLine
           RTS 
 
@@ -42,12 +42,14 @@ DrawNumB  LOADI       $B17          Random Far MM location
           LDSPR       R2
           DRAW        R7,R8,$5      Draw Sprite I at X, Y, Nbytes
           ADD         R7,$A         move x 4 width char + 6 space
-          SKNE        R7,7B         X Position after 6 BCD writes
+          SKNE        R7,7E         X Position after 6 BCD writes
           CALL        NewLine
           RTS 
 
-NewLine   LOAD        R7,$3         Reset initial X position
+NewLine   LOAD        R7,$6         Reset initial X position
           ADD         R8,$6         5 pixels tall 1 space
-          SKNE        R8,$3D        Skip unless at bottom
-          LOAD        R8,$1
+          SKNE        R8,$3E        Skip unless at bottom
+          CLR
+          SKNE		    R8,$3E        Skip unless at bottom
+		      LOAD        R8,$2 
           RTS 
