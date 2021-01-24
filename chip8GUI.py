@@ -74,7 +74,7 @@ class Chip8GUI:
     self.fg = self.BLUE_WHITE
     self.root = tk.Tk()
     self.root.config(bg=self.bg)
-    self.chip8 = Chip8()
+    self.chip8 = Chip8(self.DEBUG_MODE)
     self.screen = tk.Canvas(self.root, bg=self.bg, width=self.chip8.SCREEN_WIDTH * self.SCREEN_MULTIPLIER, height=self.chip8.SCREEN_HEIGHT * self.SCREEN_MULTIPLIER)
     self.create_pixels()
     self.screen.grid(column=0, row=0, rowspan=2)
@@ -156,7 +156,8 @@ class Chip8GUI:
     self.step_GUI()
 
   def load_from_file(self):
-    filename = tk.filedialog.askopenfilename(filetypes=[("Chip-8 Assembled Statements", ".ch8")])
+    filename = tk.filedialog.askopenfilename(filetypes=[("Chip-8 Assembled Statements", ".ch8hex"),
+                                                         ("Chip-8 binary file", ".ch8")])
 
     if self.chip8_running:
       self.run_button_event()

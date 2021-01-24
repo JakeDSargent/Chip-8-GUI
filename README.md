@@ -6,14 +6,13 @@
 
 # To assemble a new program:
 - In the repl.it terminal in the main directory (check with an `ls` if you're not sure)
-> bash Assemble.sh <yourPrgram>.<anything_but_ch8> 
+> bash Assemble.sh <yourProgram>.<anything_but_ch8> 
 
 - edit the main.py to load your `"*.ch8"` filename
 -- soon I will just add a load button
 
-## also I have only tested the instructions needed for fibonacci so far, buyer beware
-
-## changelog
+# Changelog
 - Fixed bug forcing screen redraws every frame
 -- Greatly increased speed if debug_mode is off
 - Edited statement.py to expect two operands for SHR and SHL
+- Changed GUI to only update on changes, huge performance boost

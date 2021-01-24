@@ -52,17 +52,23 @@ class Byte:
     in_value = self.sanitize(in_value)
     self.value = in_value
     self.hex_str = Byte.hex_dict[in_value//16] + Byte.hex_dict[in_value%16]
-    
+    self.update_bin_str()
+
     if negative:
-      self.set(Byte(Byte.bitwise_XOR(self, Byte("FF"))).value + 1)
+      temp_byte = Byte(Byte.bitwise_XOR(self, Byte("FF")))
+      temp_byte.increment()
+      self.set(temp_byte.value)
 
 
   def set_from_hex_str(self, in_value):
     self.value = 16 * Byte.hex_dict[in_value[0]] + Byte.hex_dict[in_value[1]]
     self.hex_str = in_value
+    self.update_bin_str()
+
 
   def set_from_bin_str(self, in_value):
     self.set_from_hex_str(''.join([self.hex_dict[self.bin_dict[in_value[4*i:4*i+4]]] for i in range(self.hex_length)]))
+    self.update_bin_str()
 
   def set(self, in_value):
     if type(in_value) == int:
@@ -75,7 +81,6 @@ class Byte:
       if len(in_value) == self.hex_length*4:
         self.set_from_bin_str(in_value)
 
-    self.update_bin_str()
 
   def update_bin_str(self):
     self.bin_str = ''.join([self.bin_dict[c] for c in self.hex_str])
@@ -131,15 +136,17 @@ class Word(Byte):
   
 
 class Chip8:
-  SCREEN_WIDTH = 128
-  SCREEN_HEIGHT = 64
+  SCREEN_WIDTH = 64
+  SCREEN_HEIGHT = 32
 
   MICROSEC_60Hz = 16667
 
   # for 8xy[6/E
   IGNORE_SHIFT_Y = True 
 
-  def __init__(self):
+  def __init__(self,GUI_IN_DEBUG=False):
+
+    self.PRINT_DEBUG = not GUI_IN_DEBUG
 
     self.V0 = Byte()
     self.V1 = Byte()
@@ -186,7 +193,6 @@ class Chip8:
 
     self.last_timer_tick = datetime.now()
 
-
   def default_registers(self):
     self.V0.set(0)
     self.V1.set(0)
@@ -220,6 +226,15 @@ class Chip8:
     self.MM[1024].set("14")  # jump to 400
 
     self.load_hex_chars()
+
+  def print_instruction(self):
+    print("0x"+self.PC.hex_str+":"+self.MM[self.PC.value].hex_str+self.MM[self.PC.value+1].hex_str, end='')
+    if self.PRINT_DEBUG:
+      for i in range(16):
+        print(" V"+Byte.hex_dict[i]+":"+self.V[Byte.hex_dict[i]].hex_str, end='')
+      print(" DT:"+self.delay.hex_str+" ST:"+self.sound.hex_str, end='')
+      print(" I:"+self.I.hex_str+" RET:"+self.Stack[self.SP.value].hex_str, end='')
+    print()
 
   def load_hex_chars(self):
     self.MM[0].set("01100000")
@@ -309,24 +324,38 @@ class Chip8:
     self.MM[84].set("01100000")
 
   def load(self, filename):
-    with open(filename, "r") as in_file:
-      lines = in_file.readlines()
+    extension = filename.split(".")[1]
 
-    for line in lines:
-      if line[:2] == "0x":
-        load_list = line.split()
-        addr = Word.get_val(load_list[0][2:])
-        instruction = load_list[1]
-        self.MM[addr].set(instruction[:2])
-        self.MM[addr+1].set(instruction[2:])
+    if extension == "ch8hex":
+      with open(filename, "r") as in_file:
+        lines = in_file.readlines()
+
+      for line in lines:
+        if line[:2] == "0x":
+          load_list = line.split()
+          addr = Word.get_val(load_list[0][2:])
+          instruction = load_list[1]
+          self.MM[addr].set(instruction[:2])
+          self.MM[addr+1].set(instruction[2:])
+
+    elif extension == "ch8":
+      with open(filename, "rb") as in_bin_file:
+        bin_data = in_bin_file.read()
+      code_base_address = 512
+      for i in range(len(bin_data)):
+        self.MM[code_base_address+i].set(bin_data[i])
+      
+      
+
 
   def execute_current_instruction(self):
     self.MM_updated = False 
 
+    self.print_instruction()
+
     instruction_str = str(self.MM[self.PC.value]) + str(self.MM[self.PC.value+1])
     self.PC.increment(2)
 
-    print(instruction_str)
     addr = "0" + instruction_str[1:] 
     w = instruction_str[0]
     x = instruction_str[1]
@@ -458,10 +487,10 @@ class Chip8:
       elif n == "5":
         total = self.V[x].value - self.V[y].value
 
-        if self.V[x].value > self.V[y].value:
-          self.VF.set(1)
-        else:
+        if total < 0:
           self.VF.set(0)
+        else:
+          self.VF.set(1)
         
         self.V[x].set(total)  # Byte handles up to negative 255 (at least)
 
@@ -474,6 +503,7 @@ class Chip8:
           self.VF.set(1)
         else:
           self.VF.set(0)
+
         self.V[x].set(self.V[y].value // 2)
 
       # 8xy7 - SUBN Vx, Vy
@@ -483,10 +513,10 @@ class Chip8:
       elif n == "7":
         total = self.V[y].value - self.V[x].value
 
-        if self.V[y].value > self.V[x].value:
-          self.VF.set(1)
-        else:
+        if total < 0:
           self.VF.set(0)
+        else:
+          self.VF.set(1)
         
         self.V[x].set(total)  # Byte handles up to negative 255 (at least)
 
@@ -546,7 +576,7 @@ class Chip8:
             if self.screen[x_pos+j][y_pos+i]:
               collision = True
 
-            self.pixel_toggles.append((x_pos+j, y_pos+i))  # handled at GUI level for performance
+            self.pixel_toggles.append((x_pos+j+1, y_pos+i+1))  # handled at GUI level for performance
 
       if collision:
         self.VF.set(1)
@@ -632,7 +662,6 @@ class Chip8:
       elif kk == 3*16 + 3:
         self.MM_updated = True
         bcd = str(self.V[x].value).rjust(3, "0")
-        print(bcd)
         self.MM[self.I.value + 0].set(int(bcd[0]))
         self.MM[self.I.value + 1].set(int(bcd[1]))
         self.MM[self.I.value + 2].set(int(bcd[2]))
